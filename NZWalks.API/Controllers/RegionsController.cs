@@ -5,6 +5,8 @@ using NZWalks.API.Repositories;
 using Mapster;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MediatR;
+using NZWalks.API.Requests;
 
 namespace NZWalks.API.Controllers
 {
@@ -12,26 +14,26 @@ namespace NZWalks.API.Controllers
     [ApiController]
     public class RegionsController : ControllerBase
     {
-        private readonly IRegionRepository regionRepository;
-
-        public RegionsController(IRegionRepository regionRepository)
+        
+        private readonly IMediator _mediator;
+        public RegionsController(IMediator mediator)
         {
-            this.regionRepository = regionRepository;
+           
+            _mediator = mediator;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var regionsDomain = await regionRepository.GetAllAsync();
-            var regionsDto = regionsDomain.Adapt<List<RegionDto>>();
+            var regionDomain = await _mediator.Send(new GetAllRegionsRequest());
+            var regionsDto = regionDomain.Adapt<List<RegionDto>>();
             return Ok(regionsDto);
         }
 
-        [HttpGet]
-        [Route("{id:int}")]
-        public async Task<IActionResult> GetById([FromRoute] int id)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
         {
-            var regionDomain = await regionRepository.GetById(id);
+            var regionDomain = await _mediator.Send(new GetRegionByIdRequest(id));
             if (regionDomain == null)
             {
                 return NotFound();
@@ -50,18 +52,19 @@ namespace NZWalks.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Map DTO to Domain model
-            var regionDomainModel = addRegionRequestDto.Adapt<Region>();
+            // Map DTO to MediatR request
+            var addRegionRequest = addRegionRequestDto.Adapt<AddRegionRequest>();
 
-            // Create the Region
-            regionDomainModel = await regionRepository.Create(regionDomainModel);
+            // Send the request to MediatR
+            var createdRegion = await _mediator.Send(addRegionRequest);
 
-            // Map Domain model to DTO
-            var regionDto = regionDomainModel.Adapt<RegionDto>();
+            // Map the created domain model to DTO
+            var regionDto = createdRegion.Adapt<RegionDto>();
 
             // Return Created response
-            return CreatedAtAction(nameof(GetById), new { id = regionDomainModel.Id }, regionDto);
+            return CreatedAtAction(nameof(GetById), new { id = regionDto.Id }, regionDto);
         }
+
 
         [HttpPut]
         [Route("{id:int}")]
@@ -77,7 +80,7 @@ namespace NZWalks.API.Controllers
             var regionDomain = updateRegionRequestDto.Adapt<Region>();
 
             // Update the Region
-            regionDomain = await regionRepository.Update(id, regionDomain);
+            regionDomain = await _mediator.Send(new UpdateRegionRequest(id,regionDomain));
             if (regionDomain == null)
             {
                 return NotFound();
@@ -94,8 +97,10 @@ namespace NZWalks.API.Controllers
         [Route("{id:int}")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
-            var regionDomain = await regionRepository.Delete(id);
-            if (regionDomain == null)
+            // Send the delete request to MediatR
+            var deletedRegion = await _mediator.Send(new DeleteRegionRequest(id));
+
+            if (deletedRegion == null)
             {
                 return NotFound();
             }
@@ -103,5 +108,6 @@ namespace NZWalks.API.Controllers
             // Return No Content response
             return NoContent();
         }
+
     }
 }

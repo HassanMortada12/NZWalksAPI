@@ -51,14 +51,8 @@ namespace NZWalks.API.Controllers
             }
 
             // Map DTO to Domain model
-            var walkDomainModel = new Walk
-            {
-                Name = addWalkRequestDto.Name,
-                Description = addWalkRequestDto.Description,
-                LengthInKm = addWalkRequestDto.LengthInKm,
-                DifficultyId = addWalkRequestDto.DifficultyId,
-                RegionId = addWalkRequestDto.RegionId
-            };
+            var walkDomainModel = addWalkRequestDto.Adapt<Walk>();
+
 
             try
             {
@@ -71,15 +65,8 @@ namespace NZWalks.API.Controllers
             }
 
             // Map Domain model to DTO
-            var walkDto = new WalkDto
-            {
-                Id = walkDomainModel.Id,
-                Name = walkDomainModel.Name,
-                Description = walkDomainModel.Description,
-                LengthInKm = walkDomainModel.LengthInKm,
-                DifficultyId = walkDomainModel.DifficultyId,
-                RegionId = walkDomainModel.RegionId
-            };
+            var walkDto = walkDomainModel.Adapt<WalkDto>();
+
 
             // Return Created response
             return CreatedAtAction(nameof(GetById), new { id = walkDto.Id }, walkDto);
